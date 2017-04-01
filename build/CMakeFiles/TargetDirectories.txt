@@ -1,0 +1,3 @@
+/home/mkultra/Projects/ReFocus/Tarsier/build/CMakeFiles/edit_cache.dir
+/home/mkultra/Projects/ReFocus/Tarsier/build/CMakeFiles/rebuild_cache.dir
+/home/mkultra/Projects/ReFocus/Tarsier/build/CMakeFiles/ReFocus.dir

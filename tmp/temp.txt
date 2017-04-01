@@ -1,0 +1,110 @@
+package com.qb.refocus;
+
+import android.util.Log;
+
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+
+public class UDPThread extends Thread
+{
+    int serverPort;
+    DatagramSocket socket;
+    boolean running;
+    String TAG = "UDP";
+
+    Mat mRgba;
+    Mat procMat;
+    MainActivity mainActivity;
+
+    public UDPThread(MainActivity mainActivity, int serverPort, Mat src1, Mat src2)
+    {
+        super();
+        this.serverPort = serverPort;
+        this.mRgba = src1;              //Temporary image for checking decodes
+        this.procMat = src2;            //The final decoded image
+        this.mainActivity = mainActivity;
+    }
+
+    public void setRunning(boolean running)
+    {
+        this.running = running;
+    }
+
+    @Override
+    public void run()
+    {
+        running = true;
+        try {
+            socket = new DatagramSocket(serverPort);
+            while (running) {
+                byte[] nmbPack = new byte[64];
+                DatagramPacket nmbPackData = new DatagramPacket(nmbPack, nmbPack.length);
+                socket.receive(nmbPackData);
+
+                int nmbofPacks = fromByteArray(nmbPack);
+                if (nmbofPacks < 0 || nmbofPacks > 50)
+                    continue;
+
+                Log.i(TAG, "# of packets: " + nmbofPacks );
+
+                List<Byte> imgData = new ArrayList<Byte>();
+
+                for(int i = 0; i < nmbofPacks; i++) {
+                    byte[] buff = new byte[65540];
+                    DatagramPacket imgPack = new DatagramPacket(buff, buff.length);
+                    socket.receive(imgPack);
+
+                    //If the data is bigger than this it is probably faulty
+                    if(imgPack.getLength() > 4097)
+                        continue;
+
+                    for(int j = 0; j < imgPack.getLength(); j++)
+                        imgData.add(buff[j]);
+                    //TODO: More efficient way than this ^^^^^^^^
+
+                }
+
+                byte[] imgBytes = new byte[imgData.size()];
+                for(int i = 0; i < imgData.size(); i++) {
+                    imgBytes[i] = imgData.get(i).byteValue();
+                }
+
+                mRgba = Imgcodecs.imdecode(new MatOfByte(imgBytes), -1);
+                if(mRgba.empty()) {
+                    Log.i(TAG, "Can't create the Image");
+                    continue;
+                }
+                if (mRgba != null && !mRgba.empty()) {
+                    Imgproc.cvtColor(mRgba, procMat, Imgproc.COLOR_RGBA2BGR);
+                    //mainActivity.updateMatDisplay();
+                    Log.i(TAG, "Created a new Mat!");
+                }
+
+            }
+            Log.i(TAG, "Exited the UDP thread!");
+
+        } catch (SocketException e)
+        {
+            e.printStackTrace();
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    int fromByteArray(byte[] bytes)
+    {
+        return ByteBuffer.wrap(bytes).getInt();
+    }
+}
