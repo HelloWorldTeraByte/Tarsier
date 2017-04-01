@@ -92,7 +92,7 @@ void setVideoSettings(cv::VideoCapture &cap)
 int main(int argc, char **argv)
 {
     //cv::VideoCapture cap("http://192.168.1.5:8080/?dummy=param.mjpg"); 
-    cv::VideoCapture cap(1); 
+    cv::VideoCapture cap("1.avi"); 
     setVideoSettings(cap);
 
     if(!cap.isOpened()) {
@@ -106,8 +106,37 @@ int main(int argc, char **argv)
     cv::MatND hist;
     bool bCalibrate = false;
 
+
+    bool bSuccess = cap.read(bigMat);
+    if(!bSuccess) {
+        std::cerr << "ERROR: Cannot read from the video!" << std::endl;
+        return -1;
+    }
+
+
+    //Top left and bottom right points for the cropping from the bigMat
+    cv::Point tlPoint;
+    cv::Point brPoint;
+
+    //The center point is set by the users click after this, and its not really the center point after this
+    cv::Point centerPoint;
+    centerPoint.x = bigMat.cols / 2;
+    centerPoint.y = bigMat.rows / 2;
+
+    cv::Mat grayFrame, adaptMat, inputFrame;
+
+    hist = calibrateToColor(bigMat, bCalibrate);
+
+    char *tsrWord;
+    tesseract::TessBaseAPI *tessApi = new tesseract::TessBaseAPI();
+    // Initialize tesseract-ocr with English, without specifying tessdata path
+    if(tessApi->Init(NULL, "eng")) {
+        fprintf(stderr, "Could not initialize tesseract.\n");
+        exit(1);
+    }
+
     while(keepRunning) {
-        
+
         int64 e1 = getCPUTickCount();
 
         bool bSuccess = cap.read(bigMat);
@@ -116,18 +145,6 @@ int main(int argc, char **argv)
             return -1;
         }
 
-        hist = calibrateToColor(bigMat, bCalibrate);
-
-        //Top left and bottom right points for the cropping from the bigMat
-        cv::Point tlPoint;
-        cv::Point brPoint;
-
-        //The center point is set by the users click after this, and its not really the center point after this
-        cv::Point centerPoint;
-        centerPoint.x = bigMat.cols / 2;
-        centerPoint.y = bigMat.rows / 2;
-
-        cv::Mat grayFrame, adaptMat, inputFrame;
 
         //PointingLoc() function corrupts the image
         cv::Mat bigMatPointProc = bigMat.clone();
@@ -305,7 +322,6 @@ int main(int argc, char **argv)
 
 
         cv::Mat oneWord;
-        cv::Mat wordMat;
         bool showWords = true;
         for (unsigned int i = 0; i < foundWords.size(); i++) {
 
@@ -316,8 +332,10 @@ int main(int argc, char **argv)
 
                 if (!oneWord.empty()) {
 
+                    tessApi->SetImage(oneWord.data, oneWord.size().width, oneWord.size().height, oneWord.channels(), oneWord.step1()); 
+                    tsrWord = tessApi->GetUTF8Text();
+
                     //cv::Mat oneWordProc = adaptMat(foundWords.at(i));
-                    wordMat = oneWord.clone();
 
                     cv::rectangle(boxMat, foundWords.at(i), cv::Scalar(255, 33, 33), 2, 8, 0);
 
@@ -352,6 +370,10 @@ int main(int argc, char **argv)
 
 
     }
+
+    tessApi->End();
+    //delete [] tsrWord;
+    cap.release();
 
     return 0;
 }
