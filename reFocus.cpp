@@ -14,16 +14,19 @@ using namespace cv;
 
 static volatile int keepRunning = 1;
 
+//Handles quiting of the main program
 void runHandler(int dummy) 
 {
     keepRunning = 0;
 }
 
+//Sort the points y values by highest to lowest
 bool SortByYInverse(const cv::Point &a, const cv::Point &b)
 {
     return a.y < b.y;
 }
 
+//Sort the points y values by lowest to highest
 bool SortByY(const cv::Point &a, const cv::Point &b)
 {
     return a.y > b.y;
@@ -92,7 +95,7 @@ void setVideoSettings(cv::VideoCapture &cap)
 int main(int argc, char **argv)
 {
     //cv::VideoCapture cap("http://192.168.1.5:8080/?dummy=param.mjpg"); 
-    cv::VideoCapture cap("1.avi"); 
+    cv::VideoCapture cap(0); 
     setVideoSettings(cap);
 
     if(!cap.isOpened()) {
@@ -100,7 +103,8 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    signal(SIGINT, runHandler);
+    //Handle signals such as C^c
+    signal(SIGINT, runHandler);                 
 
     cv::Mat bigMat;
     cv::MatND hist;
@@ -113,7 +117,6 @@ int main(int argc, char **argv)
         return -1;
     }
 
-
     //Top left and bottom right points for the cropping from the bigMat
     cv::Point tlPoint;
     cv::Point brPoint;
@@ -125,11 +128,12 @@ int main(int argc, char **argv)
 
     cv::Mat grayFrame, adaptMat, inputFrame;
 
+    //Return hist, new if bCalibrate is true and load from disk if false
     hist = calibrateToColor(bigMat, bCalibrate);
 
-    char *tsrWord;
+    //char *tsrWord;
+    //Init tesseract with eng data
     tesseract::TessBaseAPI *tessApi = new tesseract::TessBaseAPI();
-    // Initialize tesseract-ocr with English, without specifying tessdata path
     if(tessApi->Init(NULL, "eng")) {
         fprintf(stderr, "Could not initialize tesseract.\n");
         exit(1);
@@ -149,7 +153,7 @@ int main(int argc, char **argv)
         //PointingLoc() function corrupts the image
         cv::Mat bigMatPointProc = bigMat.clone();
         cv::Point pointingLoct = pointingLoc(bigMatPointProc, hist);
-        if (pointingLoct.x < bigMat.cols && pointingLoct.y - OFFSET_HAND < bigMat.rows && pointingLoct.y - OFFSET_HAND > 0 && pointingLoct.x > 0) {
+        if(pointingLoct.x < bigMat.cols && pointingLoct.y - OFFSET_HAND < bigMat.rows && pointingLoct.y - OFFSET_HAND > 0 && pointingLoct.x > 0) {
             centerPoint.y = pointingLoct.y - OFFSET_HAND;
             centerPoint.x = pointingLoct.x;
         }
@@ -191,10 +195,10 @@ int main(int argc, char **argv)
         std::vector<cv::Point> linePoints;
         std::vector<int> linePointsInt;
 
-        for (int i = 0; i < linesContours.size(); i++)
+        for(int i = 0; i < linesContours.size(); i++)
             foundLines[i] = minAreaRect(Mat(linesContours[i]));
 
-        for (int i = 0; i < linesContours.size(); i++) {
+        for(int i = 0; i < linesContours.size(); i++) {
             Point2f rect_points[4];
             foundLines[i].points(rect_points);
             std::vector<Point2f> rectPoints(rect_points,
@@ -208,7 +212,7 @@ int main(int argc, char **argv)
 
         sort(linePoints.begin(), linePoints.end(), SortByYInverse);
 
-        for (unsigned int i = 0; i < linePoints.size(); i++) {
+        for(unsigned int i = 0; i < linePoints.size(); i++) {
             linePointsInt.push_back(linePoints.at(i).y);
         }
 
@@ -221,17 +225,17 @@ int main(int argc, char **argv)
 
         //TODO: Better word height recognition
         //Automatic height recognition
-        if (bigMatProc.at<uchar>(centerPoint.y, centerPoint.x) == 255) {
+        if(bigMatProc.at<uchar>(centerPoint.y, centerPoint.x) == 255) {
 
             tlPoint = centerPoint;
             brPoint = centerPoint;
-            if (bigMatProc.at<uchar>(centerPoint.y, centerPoint.x) == 255) {
-                while (1) {
-                    if (tlPoint.y <= 2)
+            if(bigMatProc.at<uchar>(centerPoint.y, centerPoint.x) == 255) {
+                while(1) {
+                    if(tlPoint.y <= 2)
                         break;
 
                     //If there is recognised text under the cursor increse the top corner.y by x
-                    if (bigMatProc.at<uchar>(tlPoint.y, centerPoint.x) == 255)
+                    if(bigMatProc.at<uchar>(tlPoint.y, centerPoint.x) == 255)
                         tlPoint.y -= 5;
                     else {
                         tlPoint.y -= 4;
@@ -239,11 +243,11 @@ int main(int argc, char **argv)
                     }
 
                 }
-                while (1) {
-                    if (bigMatProc.rows - brPoint.y <= 2)
+                while(1) {
+                    if(bigMatProc.rows - brPoint.y <= 2)
                         break;
 
-                    if (bigMatProc.at<uchar>(brPoint.y, centerPoint.x) == 255)
+                    if(bigMatProc.at<uchar>(brPoint.y, centerPoint.x) == 255)
                         brPoint.y += 5;
                     else {
                         brPoint.y += 4;
@@ -256,41 +260,41 @@ int main(int argc, char **argv)
 
         }else {
             tlPoint.x = centerPoint.x + -200;
-            if (tlPoint.x < 0)
+            if(tlPoint.x < 0)
                 tlPoint.x = 0;
 
             tlPoint.y = centerPoint.y + -20;
-            if (tlPoint.y < 0)
+            if(tlPoint.y < 0)
                 tlPoint.y = 0;
 
             brPoint.x = centerPoint.x + 200;
-            if (brPoint.x > bigMat.cols)
+            if(brPoint.x > bigMat.cols)
                 brPoint.x = bigMat.cols;
 
             brPoint.y = centerPoint.y + 20;
-            if (brPoint.y > bigMat.rows)
+            if(brPoint.y > bigMat.rows)
                 brPoint.y = bigMat.rows;
         } //If else there are no characters recognised under the point make a set amount ROI
 
         //Make sure that these are point within the image ie. valid
         //if not fit them in the image
         tlPoint.x = centerPoint.x + -200;
-        if (tlPoint.x < 0)
+        if(tlPoint.x < 0)
             tlPoint.x = 0;
 
         brPoint.x = centerPoint.x + 200;
-        if (brPoint.x > bigMat.cols)
+        if(brPoint.x > bigMat.cols)
             brPoint.x = bigMat.cols;
 
-        if (tlPoint.y < 0)
+        if(tlPoint.y < 0)
             tlPoint.y = 0;
 
-        if (brPoint.y > bigMat.rows)
+        if(brPoint.y > bigMat.rows)
             brPoint.y = bigMat.rows;
 
 
         //Warn the user if the finger is moving off the line
-        if (closestPoint != linePointsInt.end())
+        if(closestPoint != linePointsInt.end())
             warnOffTheLine(closestPoint, centerPoint);
 
 
@@ -323,25 +327,26 @@ int main(int argc, char **argv)
 
         cv::Mat oneWord;
         bool showWords = true;
-        for (unsigned int i = 0; i < foundWords.size(); i++) {
+        for(unsigned int i = 0; i < foundWords.size(); i++) {
 
-            if (ptToProc.x > foundWords.at(i).tl().x && ptToProc.x < foundWords.at(i).br().x) {
-                if ((foundWords.at(i) & cv::Rect(0, 0, grayFrame.cols, grayFrame.rows)) ==
+            if(ptToProc.x > foundWords.at(i).tl().x && ptToProc.x < foundWords.at(i).br().x) {
+                if((foundWords.at(i) & cv::Rect(0, 0, grayFrame.cols, grayFrame.rows)) ==
                         foundWords.at(i))
                     oneWord = grayFrame(foundWords.at(i));
 
-                if (!oneWord.empty()) {
+                if(!oneWord.empty()) {
 
                     tessApi->SetImage(oneWord.data, oneWord.size().width, oneWord.size().height, oneWord.channels(), oneWord.step1()); 
-                    tsrWord = tessApi->GetUTF8Text();
+                    std::string word = tessApi->GetUTF8Text();
 
+                    std::cout << word << std::endl;
                     //cv::Mat oneWordProc = adaptMat(foundWords.at(i));
 
                     cv::rectangle(boxMat, foundWords.at(i), cv::Scalar(255, 33, 33), 2, 8, 0);
 
                 }
             }
-            if (showWords)
+            if(showWords)
                 cv::rectangle(boxMat, foundWords.at(i), cv::Scalar(0, 200, 0), 1, 8, 0);
 
         }
@@ -361,13 +366,11 @@ int main(int argc, char **argv)
 #ifdef UI_ON
         cv::imshow("boxMat", boxMat);
         cv::imshow("BigImage", bigMat);
-        cv::waitKey(100);
+        cv::waitKey(110);
 #endif
         int64 e2 = getCPUTickCount();
         float times = (float)((e2 - e1)/ getTickFrequency());
         std::cout << "TIME: " <<  times << std::endl;
-
-
 
     }
 

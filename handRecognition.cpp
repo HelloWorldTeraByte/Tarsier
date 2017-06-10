@@ -178,7 +178,6 @@ cv::Point pointingLoc(cv::Mat bigMat, cv::MatND hist)
 #ifdef UI_ON
     imshow( "Debug", debugMat );
     imshow("Morp", morphMat);
-    waitKey(10);
 #endif
 
     return pointLocation;

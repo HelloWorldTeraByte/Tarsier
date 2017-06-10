@@ -3,5 +3,6 @@
 
 #define UI_ON
 #define OFFSET_HAND 20
+#define MIN_CONT_AREA 3000
 
 #endif
