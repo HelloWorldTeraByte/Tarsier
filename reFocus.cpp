@@ -1,5 +1,7 @@
 #include <iostream>
+#include <unistd.h>
 #include <signal.h>
+#include <pthread.h>
 #include <opencv2/core/core.hpp> 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -12,12 +14,36 @@
 
 using namespace cv;
 
+typedef struct {
+    int keepRunning = 1;
+    std::string word;
+} threadInfo;
+
 static volatile int keepRunning = 1;
+threadInfo threadInfos;
+
+//Thread to handle all the text to speech stuff
+void *textToSpeech(void *threadargs)
+{
+    threadInfo *myData;
+    myData = (threadInfo*) threadargs;
+
+    while(myData->keepRunning) {
+
+        std::string command = "echo " + myData->word + " | festival --tts";
+        //int ret = system(command.c_str());
+        usleep(SECINUS/2);
+   }
+
+    std::cout << "Exited:Thread"  << std::endl;
+    pthread_exit(NULL);
+}
 
 //Handles quiting of the main program
 void runHandler(int dummy) 
 {
     keepRunning = 0;
+    threadInfos.keepRunning = 0;
 }
 
 //Sort the points y values by highest to lowest
@@ -43,14 +69,14 @@ bool SortByY(const cv::Point &a, const cv::Point &b)
 void warnOffTheLine(std::vector<int>::iterator &linePoint, cv::Point &centerPoint)
 {
     //Remeber to *the iterator
-//    int diff = *linePoint - centerPoint.y;
-//
-//    if (diff > 5 && diff < 10)
-//        cout << "Good" << endl;
-//    else if( diff > 12)
-//        cout << "Move down" << endl;
-//    else if(diff < 4)
-//        cout << "Move up" << endl;
+    //    int diff = *linePoint - centerPoint.y;
+    //
+    //    if (diff > 5 && diff < 10)
+    //        cout << "Good" << endl;
+    //    else if( diff > 12)
+    //        cout << "Move down" << endl;
+    //    else if(diff < 4)
+    //        cout << "Move up" << endl;
 }
 
 void fixSkew(cv::Mat inMat)
@@ -64,9 +90,9 @@ void fixSkew(cv::Mat inMat)
     unsigned long nb_lines = lines.size();
     for (unsigned i = 0; i < nb_lines; ++i) {
         cv::line(disp_lines, cv::Point(lines[i][0], lines[i][1]),
-                 cv::Point(lines[i][2], lines[i][3]), cv::Scalar(255, 0, 0));
+                cv::Point(lines[i][2], lines[i][3]), cv::Scalar(255, 0, 0));
         angle += atan2((double) lines[i][3] - lines[i][1],
-                       (double) lines[i][2] - lines[i][0]);
+                (double) lines[i][2] - lines[i][0]);
     }
     angle /= nb_lines; // mean angle, in radians.k
 
@@ -138,6 +164,17 @@ int main(int argc, char **argv)
         fprintf(stderr, "Could not initialize tesseract.\n");
         exit(1);
     }
+
+    pthread_t t2pThreads;
+
+    int rc;
+    rc = pthread_create(&t2pThreads, NULL, textToSpeech, (void *)&threadInfos);
+
+    if(rc) {
+        std::cerr << "ERROR: Unable to create thread," << rc << std::endl;
+        exit(-1);
+    }
+
 
     while(keepRunning) {
 
@@ -340,6 +377,8 @@ int main(int argc, char **argv)
                     std::string word = tessApi->GetUTF8Text();
 
                     std::cout << word << std::endl;
+                    word.erase(remove_if(word.begin(), word.end(), [](char c) { return !isalpha(c); } ), word.end());
+                    threadInfos.word = word;
                     //cv::Mat oneWordProc = adaptMat(foundWords.at(i));
 
                     cv::rectangle(boxMat, foundWords.at(i), cv::Scalar(255, 33, 33), 2, 8, 0);
@@ -370,9 +409,10 @@ int main(int argc, char **argv)
 #endif
         int64 e2 = getCPUTickCount();
         float times = (float)((e2 - e1)/ getTickFrequency());
-        std::cout << "TIME: " <<  times << std::endl;
+        //std::cout << "TIME: " <<  times << std::endl;
 
     }
+
 
     tessApi->End();
     //delete [] tsrWord;

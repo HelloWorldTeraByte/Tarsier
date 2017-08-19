@@ -129,7 +129,7 @@ cv::Point pointingLoc(cv::Mat bigMat, cv::MatND hist)
 
     cv::Mat morphMatProc = morphMat.clone();
     std::vector<std::vector<cv::Point> > contours;
-    cv::findContours(morphMatProc, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    cv::findContours(morphMatProc, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
     std::vector<std::vector<cv::Point> > rContours;
     for(unsigned int i=0;i<contours.size();i++)
@@ -137,6 +137,7 @@ cv::Point pointingLoc(cv::Mat bigMat, cv::MatND hist)
         if(contourArea(contours.at(i)) >= 3000)
             rContours.push_back(contours.at(i));
     }
+
     std::vector<std::vector<Point> >hull(rContours.size());
     //vector<vector<int> > hullsI(rContours.size()); // Indices to contour points
     //vector<vector<Vec4i>> defects(rContours.size());
