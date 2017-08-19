@@ -116,6 +116,7 @@ void setVideoSettings(cv::VideoCapture &cap)
 {
     cap.set(CV_CAP_PROP_FRAME_WIDTH, 720);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+    //cap.set(CV_CAP_PROP_AUTO_EXPOSURE, 1);
 } 
 
 int main(int argc, char **argv)
@@ -138,6 +139,8 @@ int main(int argc, char **argv)
 
 
     bool bSuccess = cap.read(bigMat);
+    cv::transpose(bigMat, bigMat);  
+    cv::flip(bigMat, bigMat,1);
     if(!bSuccess) {
         std::cerr << "ERROR: Cannot read from the video!" << std::endl;
         return -1;
@@ -372,7 +375,7 @@ int main(int argc, char **argv)
                     oneWord = grayFrame(foundWords.at(i));
 
                 if(!oneWord.empty()) {
-
+                    cv::imshow("oneWord", oneWord);
                     tessApi->SetImage(oneWord.data, oneWord.size().width, oneWord.size().height, oneWord.channels(), oneWord.step1()); 
                     std::string word = tessApi->GetUTF8Text();
 
@@ -405,12 +408,14 @@ int main(int argc, char **argv)
 #ifdef UI_ON
         cv::imshow("boxMat", boxMat);
         cv::imshow("BigImage", bigMat);
-        cv::waitKey(110);
+        //cv::waitKey(110);
 #endif
         int64 e2 = getCPUTickCount();
         float times = (float)((e2 - e1)/ getTickFrequency());
         //std::cout << "TIME: " <<  times << std::endl;
 
+        char key = (char) cv::waitKey(10);
+        if (key == 27) break; 
     }
 
 

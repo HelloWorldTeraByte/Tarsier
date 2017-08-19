@@ -78,7 +78,6 @@ cv::MatND calibrateToColor(cv::Mat bigMat, bool bCalibrate)
 
 #ifdef UI_ON
     cv::imshow("ROI", ROI);
-    cv::imshow("Bii", bigMat);
 #endif
 
     return hist;

@@ -5,7 +5,7 @@
 
 #define LOWEST_LETTER_AREA 2
 #define X_EPSILON 2
-#define SPACE_WIDTH 6
+#define SPACE_WIDTH 3
 #define APPROX_POLY_EP 1
 
 std::vector<cv::Rect> getLetters(cv::Mat inMat, std::vector<unsigned char> &spacePos);
