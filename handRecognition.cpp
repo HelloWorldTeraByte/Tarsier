@@ -78,6 +78,7 @@ cv::MatND calibrateToColor(cv::Mat bigMat, bool bCalibrate)
 
 #ifdef UI_ON
     cv::imshow("ROI", ROI);
+    cv::imshow("Bii", bigMat);
 #endif
 
     return hist;
@@ -123,7 +124,7 @@ cv::Point pointingLoc(cv::Mat bigMat, cv::MatND hist)
 
 
     cv::Mat morphMat = backproj.clone();
-    cv::GaussianBlur(morphMat, morphMat, Size(3,3), 0);
+    //cv::GaussianBlur(morphMat, morphMat, Size(3,3), 0);
     cv::dilate(backproj, morphMat, elementDilate );
     cv::erode(morphMat, morphMat, elementErode );
 

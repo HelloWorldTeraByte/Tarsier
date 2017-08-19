@@ -31,7 +31,7 @@ void *textToSpeech(void *threadargs)
     while(myData->keepRunning) {
 
         std::string command = "echo " + myData->word + " | festival --tts";
-        //int ret = system(command.c_str());
+        int ret = system(command.c_str());
         usleep(SECINUS/2);
    }
 
