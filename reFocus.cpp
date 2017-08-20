@@ -375,6 +375,7 @@ int main(int argc, char **argv)
                     oneWord = grayFrame(foundWords.at(i));
 
                 if(!oneWord.empty()) {
+                    cv::resize(oneWord, oneWord, cv::Size(), 3,3);
                     cv::imshow("oneWord", oneWord);
                     tessApi->SetImage(oneWord.data, oneWord.size().width, oneWord.size().height, oneWord.channels(), oneWord.step1()); 
                     std::string word = tessApi->GetUTF8Text();
